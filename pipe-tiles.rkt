@@ -1,3 +1,6 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-beginner-reader.ss" "lang")((modname pipe-tiles) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
 (require 2htdp/image)
 
 
@@ -84,10 +87,6 @@
 
 
 
-;;; Corner Content (A [percent-based] slice of a Sector)
-
-
-
 ;;; Corner Sector (quartile)
 
 (define (sector y-place x-place radius color)
@@ -98,42 +97,33 @@
         radius radius
         (circle radius "solid" color)))
 
-
-;;; TODO Shouldn't use this function, gross.
-(define (overlay-corners y-place x-place)
-  (overlay/align x-place y-place
-                 (sector y-place x-place LOWER-BARRIER "gray")
-                 (sector y-place x-place UPPER-BARRIER "black")))
-
-
 (define PIPE-CORNER-BOTTOM-RIGHT-EMPTY
-  (overlay/align
-   "right" "bottom"
-   (sector "bottom" "right" LOWER-BARRIER "gray")
-   ;+(overlay-corners "bottom" "right")+
-   ;;; green slice covering the black (...-content some-percent)
-   ;;; even SECTOR should be replaced by a (pipe-corner-bottom-right-content FULL-PERCENT)
-   (sector "bottom" "right" UPPER-BARRIER "black")
-   CELL-BACKGROUND))
+  (overlay/align "right" "bottom"
+                 (sector "bottom" "right" LOWER-BARRIER "gray")
+                 (sector "bottom" "right" UPPER-BARRIER "black")
+                 CELL-BACKGROUND))
 
 (define PIPE-CORNER-TOP-LEFT-EMPTY
-  (overlay/align
-   "left" "top"
-   (overlay-corners "top" "left")
-   CELL-BACKGROUND))
+  (overlay/align "left" "top"
+                 (sector "top" "left" LOWER-BARRIER "gray")
+                 (sector "top" "left" UPPER-BARRIER "black")
+                 CELL-BACKGROUND))
 
 (define PIPE-CORNER-TOP-RIGHT-EMPTY
-  (overlay/align
-   "right" "top"
-   (overlay-corners "top" "right")
-   CELL-BACKGROUND))
+  (overlay/align "right" "top"
+                 (sector "top" "right" LOWER-BARRIER "gray")
+                 (sector "top" "right" UPPER-BARRIER "black")
+                 CELL-BACKGROUND))
 
 (define PIPE-CORNER-BOTTOM-LEFT-EMPTY
-  (overlay/align
-   "left" "bottom"
-   (overlay-corners "bottom" "left")
-   CELL-BACKGROUND))
+  (overlay/align "left" "bottom"
+                 (sector "bottom" "left" LOWER-BARRIER "gray")
+                 (sector "bottom" "left" UPPER-BARRIER "black")
+                 CELL-BACKGROUND))
 
+
+
+; Number -> Number
 (define (degrees-to-rad degrees)
   (* degrees (/ pi 180)))
 
@@ -149,6 +139,16 @@
 (define (rotate-cw img deg)
   (rotate (- deg) img))
 
+
+
+; Number -> Number
+(define (amount-to-cut-bottom degrees)
+  (* (cos (degrees-to-rad degrees)) UPPER-BARRIER))
+
+; Number -> Number
+(define (amount-to-cut-right degrees)
+  (* (cos (degrees-to-rad degrees)) UPPER-BARRIER))
+
 ; Number -> Number
 (define (amount-to-cut-left degrees)
   (* (cos (degrees-to-rad degrees)) UPPER-BARRIER))
@@ -156,6 +156,16 @@
 ; Number -> Number
 (define (amount-to-cut-top degrees)
   (* (cos (degrees-to-rad degrees)) UPPER-BARRIER))
+
+
+
+; Image Number -> Image
+(define (trim-right img x-amount-to-cut)
+  (crop 0 ;x
+        0 ;y
+        (- (image-width img) x-amount-to-cut) ;width
+        (image-height img) ;height
+        img))
 
 ; Image Number -> Image
 (define (trim-left img x-amount-to-cut)
@@ -173,25 +183,59 @@
         (- (image-height img) y-amount-to-cut) ;height
         img))
 
+; Image Number -> Image
+(define (trim-bottom img y-amount-to-cut)
+  (crop 0
+        0 ;y
+        (image-width img) ;width
+        (- (image-height img) y-amount-to-cut) ;height
+        img))
+
+
 
 ; String Number -> GreenPizzaSlice
 ; Generate green piece of visual representation of fluid
 ; progress that can be overlayed on corner background.
-(define (green-slice-top-right-partial-fill start-position percent-filled)
-  "TODO")
-
-; String Number -> GreenPizzaSlice
-; Generate green piece of visual representation of fluid
-; progress that can be overlayed on corner background.
-(define (green-slice-top-left-partial-fill start-position percent-filled)
-  (cond [(string=? start-position "left")
-         (trim-left (rotate-ccw TOP-RIGHT-GREEN-SLICE
-                                (percent-to-degrees percent-filled))
-                    (amount-to-cut-left (percent-to-degrees percent-filled)))]
+(define (green-slice-top-right-partial-fill start-position degrees)
+  (cond [(string=? start-position "right")
+         (trim-right (rotate-cw TOP-LEFT-GREEN-SLICE degrees)
+                     (amount-to-cut-right degrees))]
         [(string=? start-position "top")
-         (trim-top (rotate-cw BOTTOM-LEFT-GREEN-SLICE
-                              (percent-to-degrees percent-filled))
-                   (amount-to-cut-top (percent-to-degrees percent-filled)))]))
+         (trim-top (rotate-ccw BOTTOM-RIGHT-GREEN-SLICE degrees)
+                   (amount-to-cut-top degrees))]))
+
+; String Number -> GreenPizzaSlice
+; Generate green piece of visual representation of fluid
+; progress that can be overlayed on corner background.
+(define (green-slice-top-left-partial-fill start-position degrees)
+  (cond [(string=? start-position "left")
+         (trim-left (rotate-ccw TOP-RIGHT-GREEN-SLICE degrees)
+                    (amount-to-cut-left degrees))]
+        [(string=? start-position "top")
+         (trim-top (rotate-cw BOTTOM-LEFT-GREEN-SLICE degrees)
+                   (amount-to-cut-top degrees))]))
+
+; String Number -> GreenPizzaSlice
+; Generate green piece of visual representation of fluid
+; progress that can be overlayed on corner background.
+(define (green-slice-bottom-left-partial-fill start-position degrees)
+  (cond [(string=? start-position "left")
+         (trim-left (rotate-cw BOTTOM-RIGHT-GREEN-SLICE degrees)
+                    (amount-to-cut-left degrees))]
+        [(string=? start-position "bottom")
+         (trim-bottom (rotate-ccw TOP-LEFT-GREEN-SLICE degrees)
+                      (amount-to-cut-bottom degrees))]))
+
+; String Number -> GreenPizzaSlice
+; Generate green piece of visual representation of fluid
+; progress that can be overlayed on corner background.
+(define (green-slice-bottom-right-partial-fill start-position degrees)
+  (cond [(string=? start-position "right")
+         (trim-right (rotate-ccw BOTTOM-LEFT-GREEN-SLICE degrees)
+                     (amount-to-cut-right degrees))]
+        [(string=? start-position "bottom")
+         (trim-bottom (rotate-cw TOP-RIGHT-GREEN-SLICE degrees)
+                      (amount-to-cut-bottom degrees))]))
 
 
 
@@ -199,16 +243,29 @@
 (define (pipe-corner-top-right-partial-fill start-position percent-filled)
   (overlay/align "right" "top"
                  TOP-RIGHT-INNER-GRAY
-                 (green-slice-top-right-partial-fill start-position percent-filled)
+                 (green-slice-top-right-partial-fill start-position (percent-to-degrees percent-filled))
                  PIPE-CORNER-TOP-RIGHT-EMPTY))
 
 ; String Number -> Image
 (define (pipe-corner-top-left-partial-fill start-position percent-filled)
   (overlay/align "left" "top"
                  TOP-LEFT-INNER-GRAY
-                 (green-slice-top-left-partial-fill start-position percent-filled)
+                 (green-slice-top-left-partial-fill start-position (percent-to-degrees percent-filled))
                  PIPE-CORNER-TOP-LEFT-EMPTY))
 
+; String Number -> Image
+(define (pipe-corner-bottom-right-partial-fill start-position percent-filled)
+  (overlay/align "right" "bottom"
+                 BOTTOM-RIGHT-INNER-GRAY
+                 (green-slice-bottom-right-partial-fill start-position (percent-to-degrees percent-filled))
+                 PIPE-CORNER-BOTTOM-RIGHT-EMPTY))
+
+; String Number -> Image
+(define (pipe-corner-bottom-left-partial-fill start-position percent-filled)
+  (overlay/align "left" "bottom"
+                 BOTTOM-LEFT-INNER-GRAY
+                 (green-slice-bottom-left-partial-fill start-position (percent-to-degrees percent-filled))
+                 PIPE-CORNER-BOTTOM-LEFT-EMPTY))
 
 
 
@@ -225,6 +282,8 @@
         WHITESPACE-BREAK
         (pipe-horizontal-partial-fill "right" 40))
 
+
+
 ;;; CORNERS
 (beside PIPE-CORNER-TOP-LEFT-EMPTY
         WHITESPACE-BREAK
@@ -232,23 +291,20 @@
         WHITESPACE-BREAK
         (pipe-corner-top-left-partial-fill "top" 30))
 
-#;
 (beside PIPE-CORNER-TOP-RIGHT-EMPTY
         WHITESPACE-BREAK
-        (pipe-corner-top-right-partial-fill "top" 70)
+        (pipe-corner-top-right-partial-fill "top" 34)
         WHITESPACE-BREAK
-        (pipe-corner-top-right-partial-fill "right" 80))
+        (pipe-corner-top-right-partial-fill "right" 26))
 
-#;
 (beside PIPE-CORNER-BOTTOM-RIGHT-EMPTY
         WHITESPACE-BREAK
-        (pipe-corner-bottom-right-partial-fill "bottom" 10)
+        (pipe-corner-bottom-right-partial-fill "bottom" 28)
         WHITESPACE-BREAK
-        (pipe-corner-bottom-right-partial-fill "right" 20))
+        (pipe-corner-bottom-right-partial-fill "right" 22))
 
-#;
 (beside PIPE-CORNER-BOTTOM-LEFT-EMPTY
         WHITESPACE-BREAK
-        (pipe-corner-bottom-left-partial-fill "bottom" 30)
+        (pipe-corner-bottom-left-partial-fill "left" 12)
         WHITESPACE-BREAK
-        (pipe-corner-bottom-left-partial-fill "left" 40))
+        (pipe-corner-bottom-left-partial-fill "bottom" 37))
