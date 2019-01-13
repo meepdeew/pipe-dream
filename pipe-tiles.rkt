@@ -1,8 +1,8 @@
 ;; The first three lines of this file were inserted by DrRacket. They record metadata
 ;; about the language level of this file in a form that our tools can easily process.
-#reader(lib "htdp-beginner-reader.ss" "lang")((modname pipe-tiles) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
+#reader(lib "htdp-advanced-reader.ss" "lang")((modname pipe-tiles) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #t #t none #f () #f)))
 (require 2htdp/image)
-
+(require 2htdp/universe)
 
 ;;; Constants
 
@@ -308,3 +308,114 @@
         (pipe-corner-bottom-left-partial-fill "left" 12)
         WHITESPACE-BREAK
         (pipe-corner-bottom-left-partial-fill "bottom" 37))
+
+
+;; Add a world program
+
+; List-of-Anything is one of:
+; - (cons Any empty)
+; - (cons Any List-of-Anything)
+
+(check-expect (add-to-end 0 empty) (cons 0 empty))
+(check-expect (add-to-end 6 (cons 5 empty))
+              (cons 5 (cons 6 empty)))
+(check-expect (add-to-end 3 (cons 1 (cons 2 empty)))
+              (cons 1 (cons 2 (cons 3 empty))))
+
+
+
+; List-of-Anything Any -> List-of-Anything
+; add element to end of list
+
+(define (add-to-end item listo)
+  (reverse-copy (cons item (reverse-copy listo))))
+
+
+(check-expect (reverse-copy empty) empty)
+(check-expect (reverse-copy (cons 1 empty)) (cons 1 empty))
+(check-expect (reverse-copy (cons 1 (cons 2 empty))) (cons 2 (cons 1 empty)))
+(check-expect (reverse-copy (cons 1 (cons 2 (cons 3 empty))))
+              (cons 3 (cons 2 (cons 1 empty))))
+                                        ; (listof Any) -> (listof Any)
+(define (reverse-copy lst0)
+  (local [(define (rev lst acc)
+            (cond [(empty? lst) acc]
+                  [else  (rev (rest lst)
+                              (cons (first lst) acc))]))]
+    (rev lst0 empty)))
+
+(check-expect
+ (front-to-back (cons "red" (cons "orange" (cons "yellow" (cons "green" (cons "blue" '()))))))
+ (cons "orange" (cons "yellow" (cons "green" (cons "blue" (cons "red" '()))))))
+; List-of-Anything -> List-of-Anything
+; move the front-most item in a list the end.
+(define (front-to-back lst)
+  (add-to-end (first lst) (rest lst)))
+
+
+(define TILES (list PIPE-CORNER-BOTTOM-LEFT-EMPTY
+                    PIPE-CORNER-BOTTOM-RIGHT-EMPTY
+                    PIPE-CORNER-TOP-LEFT-EMPTY
+                    PIPE-CORNER-TOP-RIGHT-EMPTY
+                    PIPE-VERTICAL-EMPTY
+                    PIPE-HORIZONTAL-EMPTY))
+
+(define (random-tile-ignore-arg n)
+  (random-tile))
+
+(define (random-tile)
+  (list-ref TILES (random (- (length TILES) 1))))
+
+(define TILE-QUEUE (build-list 9 random-tile-ignore-arg))
+
+; (listof String) -> Image
+(define (draw-tile-queue lst)
+  (above
+   (fifth lst)
+   WHITESPACE-BREAK
+   (fourth lst)
+   WHITESPACE-BREAK
+   (third lst)
+   WHITESPACE-BREAK
+   (second lst)
+   WHITESPACE-BREAK
+   (first lst)))
+
+; (listof String) -> (listof String)
+; remove first element from queue
+; add a random color to back of queue
+(define (key-handler s ke)
+  (add-to-end (random-tile) (rest s)))
+;(define (key-handler s ke)
+;  (add-to-end (random-color) (rest s)))
+
+(define (main-tq tq)
+  (big-bang tq
+    [to-draw draw-tile-queue]
+    [on-key key-handler]))
+
+
+
+
+(main-tq TILE-QUEUE)
+
+
+
+;; Or just make a new one.
+
+
+(define TILE-WIDTH 3)
+
+; [0,0] at top left, [row-1, col-1] at bottom right
+;(define (coords-to-index x y))
+
+;(local [(define b WHITESPACE-BREAK)
+;        (define sr (square CELL-WIDTH "solid" "red"))
+;        (define sb (square CELL-WIDTH "solid" "blue"))
+;        (define sg (square CELL-WIDTH "solid" "green"))
+;        (define lst (list sr sb sg sb sg sr sr sg sb))]
+;  (above (beside (first lst) (second lst) (third lst))
+;         (beside sb sg sr)
+;         (beside sr sg sb)))
+
+
