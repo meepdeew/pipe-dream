@@ -6,8 +6,16 @@
 
 ;;; Constants
 
+
 (define CELL-WIDTH 50)
-(define CELL-BACKGROUND (square CELL-WIDTH "solid" "gray"))
+(define GAME-WIDTH (* CELL-WIDTH 12))
+
+; Image -> Image
+(define (add-tile-edges tile)
+  (overlay (square CELL-WIDTH "outline" "DimGray") tile))
+
+(define CELL-BACKGROUND
+  (add-tile-edges (square CELL-WIDTH "solid" "gray")))
 
 (define LOWER-BARRIER (* CELL-WIDTH 0.4))
 (define UPPER-BARRIER (* CELL-WIDTH 0.6))
@@ -15,6 +23,8 @@
 
 (define PERCENT-FULL 100)
 (define PIPE-WIDTH (* CELL-WIDTH 0.2))
+
+(define MAIN-ICON (bitmap/file "./pd-icon.png"))
 
 (define (linear-pipe-fill-length percent-filled)
   (* CELL-WIDTH (/ percent-filled PERCENT-FULL)))
@@ -60,30 +70,34 @@
 ;;; Pipe Tile Partially Filled w/ Background
 
 (define (pipe-vertical-partial-fill start-position percent-filled)
-  (overlay/align "middle" start-position
-                 (pipe-vertical-content percent-filled "green")
-                 (pipe-vertical-content PERCENT-FULL "black")
-                 CELL-BACKGROUND))
+  (add-tile-edges
+   (overlay/align "middle" start-position
+                  (pipe-vertical-content percent-filled "green")
+                  (pipe-vertical-content PERCENT-FULL "black")
+                  CELL-BACKGROUND)))
 
 (define (pipe-horizontal-partial-fill start-position percent-filled)
-  (overlay/align start-position "middle"
-                 (pipe-horizontal-content percent-filled "green")
-                 (pipe-horizontal-content PERCENT-FULL "black")
-                 CELL-BACKGROUND))
+  (add-tile-edges
+   (overlay/align start-position "middle"
+                  (pipe-horizontal-content percent-filled "green")
+                  (pipe-horizontal-content PERCENT-FULL "black")
+                  CELL-BACKGROUND)))
 
 
 
 ;;; Empties
 
 (define PIPE-VERTICAL-EMPTY
-  (overlay/align "middle" "bottom"
-                 (pipe-vertical-content PERCENT-FULL "black")
-                 CELL-BACKGROUND))
+  (add-tile-edges
+   (overlay/align "middle" "bottom"
+                  (pipe-vertical-content PERCENT-FULL "black")
+                  CELL-BACKGROUND)))
 
 (define PIPE-HORIZONTAL-EMPTY
-  (overlay/align "left" "middle"
-                 (pipe-horizontal-content PERCENT-FULL "black")
-                 CELL-BACKGROUND))
+  (add-tile-edges
+   (overlay/align "left" "middle"
+                  (pipe-horizontal-content PERCENT-FULL "black")
+                  CELL-BACKGROUND)))
 
 
 
@@ -98,28 +112,32 @@
         (circle radius "solid" color)))
 
 (define PIPE-CORNER-BOTTOM-RIGHT-EMPTY
-  (overlay/align "right" "bottom"
-                 (sector "bottom" "right" LOWER-BARRIER "gray")
-                 (sector "bottom" "right" UPPER-BARRIER "black")
-                 CELL-BACKGROUND))
+  (add-tile-edges
+   (overlay/align "right" "bottom"
+                  (sector "bottom" "right" LOWER-BARRIER "gray")
+                  (sector "bottom" "right" UPPER-BARRIER "black")
+                  CELL-BACKGROUND)))
 
 (define PIPE-CORNER-TOP-LEFT-EMPTY
-  (overlay/align "left" "top"
-                 (sector "top" "left" LOWER-BARRIER "gray")
-                 (sector "top" "left" UPPER-BARRIER "black")
-                 CELL-BACKGROUND))
+  (add-tile-edges
+   (overlay/align "left" "top"
+                  (sector "top" "left" LOWER-BARRIER "gray")
+                  (sector "top" "left" UPPER-BARRIER "black")
+                  CELL-BACKGROUND)))
 
 (define PIPE-CORNER-TOP-RIGHT-EMPTY
-  (overlay/align "right" "top"
-                 (sector "top" "right" LOWER-BARRIER "gray")
-                 (sector "top" "right" UPPER-BARRIER "black")
-                 CELL-BACKGROUND))
+  (add-tile-edges
+   (overlay/align "right" "top"
+                  (sector "top" "right" LOWER-BARRIER "gray")
+                  (sector "top" "right" UPPER-BARRIER "black")
+                  CELL-BACKGROUND)))
 
 (define PIPE-CORNER-BOTTOM-LEFT-EMPTY
-  (overlay/align "left" "bottom"
-                 (sector "bottom" "left" LOWER-BARRIER "gray")
-                 (sector "bottom" "left" UPPER-BARRIER "black")
-                 CELL-BACKGROUND))
+  (add-tile-edges
+   (overlay/align "left" "bottom"
+                  (sector "bottom" "left" LOWER-BARRIER "gray")
+                  (sector "bottom" "left" UPPER-BARRIER "black")
+                  CELL-BACKGROUND)))
 
 
 
@@ -241,31 +259,35 @@
 
 ; String Number -> Image
 (define (pipe-corner-top-right-partial-fill start-position percent-filled)
-  (overlay/align "right" "top"
-                 TOP-RIGHT-INNER-GRAY
-                 (green-slice-top-right-partial-fill start-position (percent-to-degrees percent-filled))
-                 PIPE-CORNER-TOP-RIGHT-EMPTY))
+  (add-tile-edges
+   (overlay/align "right" "top"
+                  TOP-RIGHT-INNER-GRAY
+                  (green-slice-top-right-partial-fill start-position (percent-to-degrees percent-filled))
+                  PIPE-CORNER-TOP-RIGHT-EMPTY)))
 
 ; String Number -> Image
 (define (pipe-corner-top-left-partial-fill start-position percent-filled)
-  (overlay/align "left" "top"
-                 TOP-LEFT-INNER-GRAY
-                 (green-slice-top-left-partial-fill start-position (percent-to-degrees percent-filled))
-                 PIPE-CORNER-TOP-LEFT-EMPTY))
+  (add-tile-edges
+   (overlay/align "left" "top"
+                  TOP-LEFT-INNER-GRAY
+                  (green-slice-top-left-partial-fill start-position (percent-to-degrees percent-filled))
+                  PIPE-CORNER-TOP-LEFT-EMPTY)))
 
 ; String Number -> Image
 (define (pipe-corner-bottom-right-partial-fill start-position percent-filled)
-  (overlay/align "right" "bottom"
-                 BOTTOM-RIGHT-INNER-GRAY
-                 (green-slice-bottom-right-partial-fill start-position (percent-to-degrees percent-filled))
-                 PIPE-CORNER-BOTTOM-RIGHT-EMPTY))
+  (add-tile-edges
+   (overlay/align "right" "bottom"
+                  BOTTOM-RIGHT-INNER-GRAY
+                  (green-slice-bottom-right-partial-fill start-position (percent-to-degrees percent-filled))
+                  PIPE-CORNER-BOTTOM-RIGHT-EMPTY)))
 
 ; String Number -> Image
 (define (pipe-corner-bottom-left-partial-fill start-position percent-filled)
-  (overlay/align "left" "bottom"
-                 BOTTOM-LEFT-INNER-GRAY
-                 (green-slice-bottom-left-partial-fill start-position (percent-to-degrees percent-filled))
-                 PIPE-CORNER-BOTTOM-LEFT-EMPTY))
+  (add-tile-edges
+   (overlay/align "left" "bottom"
+                  BOTTOM-LEFT-INNER-GRAY
+                  (green-slice-bottom-left-partial-fill start-position (percent-to-degrees percent-filled))
+                  PIPE-CORNER-BOTTOM-LEFT-EMPTY)))
 
 
 
@@ -368,18 +390,66 @@
 
 (define TILE-QUEUE (build-list 9 random-tile-ignore-arg))
 
+(define BLUE-NAV (overlay
+    (text "Pipe Dream" 14 "white")
+    (rectangle GAME-WIDTH (/ CELL-WIDTH 3) "solid" "blue")))
+
+(define WHITE-NAV (overlay/align
+    "left" "bottom"
+    (beside (text "Game" 14 "black") WHITESPACE-BREAK WHITESPACE-BREAK
+            (text "Skill" 14 "black") WHITESPACE-BREAK WHITESPACE-BREAK
+            (text "Help" 14 "black"))
+    (rectangle GAME-WIDTH (/ CELL-WIDTH 3) "solid" "white")))
+
+(define (draw-everything lst)
+  (above BLUE-NAV
+         WHITE-NAV
+         (draw-dynamic-portion lst)))
+
+(define (draw-dynamic-portion lst)
+  (above (rectangle GAME-WIDTH (/ CELL-WIDTH 3) "solid" "lightgray")
+         (draw-dynamic-middle lst)
+         (rectangle GAME-WIDTH (/ CELL-WIDTH 3) "solid" "lightgray")))
+
+(define (draw-dynamic-middle lst)
+  (beside (rectangle (/ CELL-WIDTH 3) (* 7 CELL-WIDTH) "solid" "lightgray")
+          (draw-left-content lst)
+          (rectangle (/ CELL-WIDTH 3) (* 7 CELL-WIDTH) "solid" "lightgray")
+          ;(rectangle 400 300 "outline" "red")
+          (draw-grid lst)
+          (rectangle (/ CELL-WIDTH 3) (* 7 CELL-WIDTH) "solid" "lightgray")))
+
+(define (draw-left-content lst)
+  (above
+   (overlay
+    MAIN-ICON
+    (rectangle CELL-WIDTH (+ CELL-WIDTH 20) "solid" "lightgray"))
+   (draw-tile-queue lst)
+   (rectangle CELL-WIDTH (- CELL-WIDTH 20) "solid" "lightgray")))
+
+(define EMPTY-GRID-ROW
+  (beside CELL-BACKGROUND CELL-BACKGROUND
+          CELL-BACKGROUND CELL-BACKGROUND
+          CELL-BACKGROUND CELL-BACKGROUND
+          CELL-BACKGROUND CELL-BACKGROUND
+          CELL-BACKGROUND CELL-BACKGROUND))
+
+(define (draw-grid lst)
+  (above EMPTY-GRID-ROW
+         EMPTY-GRID-ROW
+         EMPTY-GRID-ROW
+         EMPTY-GRID-ROW
+         EMPTY-GRID-ROW
+         EMPTY-GRID-ROW
+         EMPTY-GRID-ROW))
+
 ; (listof String) -> Image
 (define (draw-tile-queue lst)
-  (above
-   (fifth lst)
-   WHITESPACE-BREAK
-   (fourth lst)
-   WHITESPACE-BREAK
-   (third lst)
-   WHITESPACE-BREAK
-   (second lst)
-   WHITESPACE-BREAK
-   (first lst)))
+  (above (fifth lst)
+         (fourth lst)
+         (third lst)
+         (second lst)
+         (first lst)))
 
 ; (listof String) -> (listof String)
 ; remove first element from queue
@@ -389,33 +459,32 @@
 ;(define (key-handler s ke)
 ;  (add-to-end (random-color) (rest s)))
 
-(define (main-tq tq)
+(define (main-pd tq)
   (big-bang tq
-    [to-draw draw-tile-queue]
+    [to-draw draw-everything]
     [on-key key-handler]))
 
+(define (init-false x)
+  #false)
+(define board-state (build-list 70 init-false))
+
+
+; Number -> Posn
+(define (get-posn idx)
+  (make-posn (floor (/ idx 10)) (modulo idx 10)))
+
+; Posn -> Number
+(define (get-index p)
+  ((* 10 (posn-x p)) (posn-y p)))
 
 
 
-(main-tq TILE-QUEUE)
-
-
-
-;; Or just make a new one.
-
-
-(define TILE-WIDTH 3)
+(main-pd TILE-QUEUE)
 
 ; [0,0] at top left, [row-1, col-1] at bottom right
-;(define (coords-to-index x y))
 
-;(local [(define b WHITESPACE-BREAK)
-;        (define sr (square CELL-WIDTH "solid" "red"))
-;        (define sb (square CELL-WIDTH "solid" "blue"))
-;        (define sg (square CELL-WIDTH "solid" "green"))
-;        (define lst (list sr sb sg sb sg sr sr sg sb))]
-;  (above (beside (first lst) (second lst) (third lst))
-;         (beside sb sg sr)
-;         (beside sr sg sb)))
+
+
+
 
 

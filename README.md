@@ -1,4 +1,5 @@
-# pipe-dream
+# Pipe Dream
 
-Feeling nostalgic for the old windows game
-![Pipe Dream Welcome Screen](./welcome-img.png)
+I've been feeling nostalgic for the old Windows game.
+
+![Pipe Dream Welcome Screen](./pd-screenshot.png)
