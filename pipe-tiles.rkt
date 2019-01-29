@@ -71,14 +71,16 @@
 
 (define (pipe-vertical-partial-fill start-position percent-filled)
   (add-tile-edges
-   (overlay/align "middle" start-position
+   (overlay/align "middle"
+                  (if (= 0 percent-filled) "bottom" start-position)
                   (pipe-vertical-content percent-filled "green")
                   (pipe-vertical-content PERCENT-FULL "black")
                   CELL-BACKGROUND)))
 
 (define (pipe-horizontal-partial-fill start-position percent-filled)
   (add-tile-edges
-   (overlay/align start-position "middle"
+   (overlay/align (if (= 0 percent-filled) "left" start-position)
+                  "middle"
                   (pipe-horizontal-content percent-filled "green")
                   (pipe-horizontal-content PERCENT-FULL "black")
                   CELL-BACKGROUND)))
@@ -262,7 +264,9 @@
   (add-tile-edges
    (overlay/align "right" "top"
                   TOP-RIGHT-INNER-GRAY
-                  (green-slice-top-right-partial-fill start-position (percent-to-degrees percent-filled))
+                  (green-slice-top-right-partial-fill
+                   (if (= 0 percent-filled) "top" start-position)
+                   (percent-to-degrees percent-filled))
                   PIPE-CORNER-TOP-RIGHT-EMPTY)))
 
 ; String Number -> Image
@@ -270,7 +274,9 @@
   (add-tile-edges
    (overlay/align "left" "top"
                   TOP-LEFT-INNER-GRAY
-                  (green-slice-top-left-partial-fill start-position (percent-to-degrees percent-filled))
+                  (green-slice-top-left-partial-fill
+                   (if (= 0 percent-filled) "top" start-position)
+                   (percent-to-degrees percent-filled))
                   PIPE-CORNER-TOP-LEFT-EMPTY)))
 
 ; String Number -> Image
@@ -278,7 +284,9 @@
   (add-tile-edges
    (overlay/align "right" "bottom"
                   BOTTOM-RIGHT-INNER-GRAY
-                  (green-slice-bottom-right-partial-fill start-position (percent-to-degrees percent-filled))
+                  (green-slice-bottom-right-partial-fill
+                   (if (= 0 percent-filled) "bottom" start-position)
+                   (percent-to-degrees percent-filled))
                   PIPE-CORNER-BOTTOM-RIGHT-EMPTY)))
 
 ; String Number -> Image
@@ -286,49 +294,39 @@
   (add-tile-edges
    (overlay/align "left" "bottom"
                   BOTTOM-LEFT-INNER-GRAY
-                  (green-slice-bottom-left-partial-fill start-position (percent-to-degrees percent-filled))
+                  (green-slice-bottom-left-partial-fill
+                   (if (= 0 percent-filled) "bottom" start-position)
+                   (percent-to-degrees percent-filled))
                   PIPE-CORNER-BOTTOM-LEFT-EMPTY)))
 
 
 
 ;;; LINES
-(beside PIPE-VERTICAL-EMPTY
-        WHITESPACE-BREAK
+(beside (pipe-vertical-partial-fill "unknown" 0)
         (pipe-vertical-partial-fill "bottom" 17)
-        WHITESPACE-BREAK
         (pipe-vertical-partial-fill "top" 27))
 
-(beside PIPE-HORIZONTAL-EMPTY
-        WHITESPACE-BREAK
+(beside (pipe-horizontal-partial-fill "unknown" 0)
         (pipe-horizontal-partial-fill "left" 20)
-        WHITESPACE-BREAK
         (pipe-horizontal-partial-fill "right" 40))
 
 
 
 ;;; CORNERS
-(beside PIPE-CORNER-TOP-LEFT-EMPTY
-        WHITESPACE-BREAK
+(beside (pipe-corner-top-left-partial-fill "unknown" 0)
         (pipe-corner-top-left-partial-fill "left" 40)
-        WHITESPACE-BREAK
         (pipe-corner-top-left-partial-fill "top" 30))
 
-(beside PIPE-CORNER-TOP-RIGHT-EMPTY
-        WHITESPACE-BREAK
+(beside (pipe-corner-top-right-partial-fill "unknown" 0)
         (pipe-corner-top-right-partial-fill "top" 34)
-        WHITESPACE-BREAK
         (pipe-corner-top-right-partial-fill "right" 26))
 
-(beside PIPE-CORNER-BOTTOM-RIGHT-EMPTY
-        WHITESPACE-BREAK
+(beside (pipe-corner-bottom-right-partial-fill "unknown" 0)
         (pipe-corner-bottom-right-partial-fill "bottom" 28)
-        WHITESPACE-BREAK
         (pipe-corner-bottom-right-partial-fill "right" 22))
 
-(beside PIPE-CORNER-BOTTOM-LEFT-EMPTY
-        WHITESPACE-BREAK
+(beside (pipe-corner-bottom-left-partial-fill "unknown" 0)
         (pipe-corner-bottom-left-partial-fill "left" 12)
-        WHITESPACE-BREAK
         (pipe-corner-bottom-left-partial-fill "bottom" 37))
 
 
@@ -358,7 +356,8 @@
 (check-expect (reverse-copy (cons 1 (cons 2 empty))) (cons 2 (cons 1 empty)))
 (check-expect (reverse-copy (cons 1 (cons 2 (cons 3 empty))))
               (cons 3 (cons 2 (cons 1 empty))))
-                                        ; (listof Any) -> (listof Any)
+
+; (listof Any) -> (listof Any)
 (define (reverse-copy lst0)
   (local [(define (rev lst acc)
             (cond [(empty? lst) acc]
@@ -369,26 +368,128 @@
 (check-expect
  (front-to-back (cons "red" (cons "orange" (cons "yellow" (cons "green" (cons "blue" '()))))))
  (cons "orange" (cons "yellow" (cons "green" (cons "blue" (cons "red" '()))))))
+
 ; List-of-Anything -> List-of-Anything
 ; move the front-most item in a list the end.
 (define (front-to-back lst)
   (add-to-end (first lst) (rest lst)))
 
+; A Position is one of:
+; - "unknown"
+; - "top"
+; - "bottom"
+; - "left"
+; - "right"
 
-(define TILES (list PIPE-CORNER-BOTTOM-LEFT-EMPTY
-                    PIPE-CORNER-BOTTOM-RIGHT-EMPTY
-                    PIPE-CORNER-TOP-LEFT-EMPTY
-                    PIPE-CORNER-TOP-RIGHT-EMPTY
-                    PIPE-VERTICAL-EMPTY
-                    PIPE-HORIZONTAL-EMPTY))
+; A StateTile is a data representation of a tile at any moment in time.
+(define-struct state-tile
+  [type start-position end-position percent-filled])
+; Type is one of:
+; - "pipe-vertical"
+; - "pipe-horizontal"
+; - "pipe-corner-top-left"
+; - "pipe-corner-top-right"
+; - "pipe-corner-bottom-left"
+; - "pipe-corner-bottom-right"
+; StartPosition is a Position
+; EndPosition is a Position
+; PercentFilled is a Integer from [0, 100]
 
+; Needs to be able to accept flow from either side
+; What about position without a tile?
+(define EMPTY-STATE-TILES-LIST
+  (list (make-state-tile "pipe-vertical" "unknown" "unknown" 0)
+        (make-state-tile "pipe-horizontal" "unknown" "unknown" 0)
+        (make-state-tile "pipe-corner-top-left" "unknown" "unknown" 0)
+        (make-state-tile "pipe-corner-top-right" "unknown" "unknown" 0)
+        (make-state-tile "pipe-corner-bottom-left" "unknown" "unknown" 0)
+        (make-state-tile "pipe-corner-bottom-right" "unknown" "unknown" 0)))
+
+
+; StateTile -> Image
+(define (state-tile->image st)
+  (local [(define type (state-tile-type st))
+          (define start-position (state-tile-start-position st))
+          (define percent-filled (state-tile-percent-filled st))]
+    (cond
+      [(string=? "no-pipe" type)
+       CELL-BACKGROUND]
+      [(string=? "pipe-vertical" type)
+       (pipe-vertical-partial-fill start-position percent-filled)]
+      [(string=? "pipe-horizontal" type)
+       (pipe-horizontal-partial-fill start-position percent-filled)]
+      [(string=? "pipe-corner-top-left" type)
+       (pipe-corner-top-left-partial-fill start-position percent-filled)]
+      [(string=? "pipe-corner-top-right" type)
+       (pipe-corner-top-right-partial-fill start-position percent-filled)]
+      [(string=? "pipe-corner-bottom-left" type)
+       (pipe-corner-bottom-left-partial-fill start-position percent-filled)]
+      [(string=? "pipe-corner-bottom-right" type)
+       (pipe-corner-bottom-right-partial-fill start-position percent-filled)])))
+
+
+(define exlist
+  (list (make-state-tile "pipe-vertical" "bottom" "unknown" 0)
+        (make-state-tile "pipe-vertical" "bottom" "unknown" 10)
+        (make-state-tile "pipe-vertical" "bottom" "unknown" 20)))
+
+(check-expect
+ (create-board-row 0 0 exlist)
+ (state-tile->image
+  (make-state-tile "pipe-vertical" "bottom" "unknown" 0)))
+
+(check-expect
+ (create-board-row 0 1 exlist)
+ (beside (state-tile->image (make-state-tile "pipe-vertical" "bottom" "unknown" 0))
+         (state-tile->image (make-state-tile "pipe-vertical" "bottom" "unknown" 10))))
+
+(check-expect
+ (create-board-row 0 2 exlist)
+ (beside (state-tile->image (make-state-tile "pipe-vertical" "bottom" "unknown" 0))
+         (beside (state-tile->image (make-state-tile "pipe-vertical" "bottom" "unknown" 10))
+                 (state-tile->image (make-state-tile "pipe-vertical" "bottom" "unknown" 20)))))
+
+; Natural Natural (listof StateTile) -> Image
+(define (create-board-row start-idx end-idx lst)
+  (cond
+    [(<= end-idx start-idx)
+     (state-tile->image(list-ref lst start-idx))]
+    [else
+     (beside (state-tile->image (list-ref lst start-idx))
+             (create-board-row (+ 1 start-idx) end-idx lst))]))
+
+; Any -> Image
 (define (random-tile-ignore-arg n)
   (random-tile))
 
+; -> Image
 (define (random-tile)
-  (list-ref TILES (random (- (length TILES) 1))))
+  (list-ref EMPTY-STATE-TILES-LIST
+            (random (length EMPTY-STATE-TILES-LIST))))
 
-(define TILE-QUEUE (build-list 9 random-tile-ignore-arg))
+; Any -> Image
+(define (empty-tile-ignore-arg n)
+  (empty-tile))
+
+; -> Image
+(define (empty-tile)
+  (make-state-tile "pipe-vertical" "bottom" "unknown" 10))
+
+;; TODO:
+; A GameState composes two lists for maintaining
+; the tile-queue and the game-board
+(define-struct game-state [tile-queue tile-board])
+
+;; (listof StateTile)
+(define TILE-QUEUE
+  (build-list 9 random-tile-ignore-arg))
+
+;; (listof StateTile)
+(define TILE-BOARD
+  (build-list 70 empty-tile-ignore-arg))
+
+;; To be passed to main and big-bang function
+(define GAME-STATE (make-game-state TILE-QUEUE TILE-BOARD))
 
 (define BLUE-NAV (overlay
     (text "Pipe Dream" 14 "white")
@@ -396,77 +497,100 @@
 
 (define WHITE-NAV (overlay/align
     "left" "bottom"
-    (beside (text "Game" 14 "black") WHITESPACE-BREAK WHITESPACE-BREAK
-            (text "Skill" 14 "black") WHITESPACE-BREAK WHITESPACE-BREAK
+    (beside (text "Game" 14 "black")
+            WHITESPACE-BREAK WHITESPACE-BREAK
+            (text "Skill" 14 "black")
+            WHITESPACE-BREAK WHITESPACE-BREAK
             (text "Help" 14 "black"))
     (rectangle GAME-WIDTH (/ CELL-WIDTH 3) "solid" "white")))
 
-(define (draw-everything lst)
+; GameState -> Image
+(define (draw-everything s)
   (above BLUE-NAV
          WHITE-NAV
-         (draw-dynamic-portion lst)))
+         (draw-dynamic-portion s)))
 
-(define (draw-dynamic-portion lst)
+; GameState -> Image
+(define (draw-dynamic-portion s)
   (above (rectangle GAME-WIDTH (/ CELL-WIDTH 3) "solid" "lightgray")
-         (draw-dynamic-middle lst)
+         (draw-dynamic-middle s)
          (rectangle GAME-WIDTH (/ CELL-WIDTH 3) "solid" "lightgray")))
 
-(define (draw-dynamic-middle lst)
+; GameState -> Image
+(define (draw-dynamic-middle s)
   (beside (rectangle (/ CELL-WIDTH 3) (* 7 CELL-WIDTH) "solid" "lightgray")
-          (draw-left-content lst)
+          (draw-left-content s)
           (rectangle (/ CELL-WIDTH 3) (* 7 CELL-WIDTH) "solid" "lightgray")
           ;(rectangle 400 300 "outline" "red")
-          (draw-grid lst)
+          (draw-grid s)
           (rectangle (/ CELL-WIDTH 3) (* 7 CELL-WIDTH) "solid" "lightgray")))
 
-(define (draw-left-content lst)
+; GameState -> Image
+(define (draw-left-content s)
   (above
    (overlay
     MAIN-ICON
     (rectangle CELL-WIDTH (+ CELL-WIDTH 20) "solid" "lightgray"))
-   (draw-tile-queue lst)
+   (draw-tile-queue s)
    (rectangle CELL-WIDTH (- CELL-WIDTH 20) "solid" "lightgray")))
 
+#;
 (define EMPTY-GRID-ROW
+  ;(create-board-row 0 9 )
   (beside CELL-BACKGROUND CELL-BACKGROUND
           CELL-BACKGROUND CELL-BACKGROUND
           CELL-BACKGROUND CELL-BACKGROUND
           CELL-BACKGROUND CELL-BACKGROUND
           CELL-BACKGROUND CELL-BACKGROUND))
 
-(define (draw-grid lst)
-  (above EMPTY-GRID-ROW
-         EMPTY-GRID-ROW
-         EMPTY-GRID-ROW
-         EMPTY-GRID-ROW
-         EMPTY-GRID-ROW
-         EMPTY-GRID-ROW
-         EMPTY-GRID-ROW))
+; GameState -> Image
+(define (draw-grid s)
+  (above (create-board-row  0  9 (game-state-tile-board s))
+         (create-board-row 10 19 (game-state-tile-board s))
+         (create-board-row 20 29 (game-state-tile-board s))
+         (create-board-row 30 39 (game-state-tile-board s))
+         (create-board-row 40 49 (game-state-tile-board s))
+         (create-board-row 50 59 (game-state-tile-board s))
+         (create-board-row 60 69 (game-state-tile-board s))))
 
-; (listof String) -> Image
-(define (draw-tile-queue lst)
-  (above (fifth lst)
-         (fourth lst)
-         (third lst)
-         (second lst)
-         (first lst)))
+; GameState -> Image
+(define (draw-tile-queue s)
+  (above (state-tile->image (fifth (game-state-tile-queue s)))
+         (state-tile->image (fourth (game-state-tile-queue s)))
+         (state-tile->image (third (game-state-tile-queue s)))
+         (state-tile->image (second (game-state-tile-queue s)))
+         (state-tile->image (first (game-state-tile-queue s)))))
 
-; (listof String) -> (listof String)
+#;
+(define (draw-tile-board-row start end tile-board)
+  ...)
+
+; GameState -> Image
+(define (draw-tile-board s)
+  ;(above (draw-tile-board-row 0 9 (game-state-tile-board s)))
+  (above (beside (list-ref (game-state-tile-board s) 0)
+                 (list-ref (game-state-tile-board s) 1)
+                 (list-ref (game-state-tile-board s) 2))
+         (beside (list-ref (game-state-tile-board s) 3)
+                 (list-ref (game-state-tile-board s) 4)
+                 (list-ref (game-state-tile-board s) 5))))
+
+
+; (listof Any) -> (listof Any)
+; GameState KeyEvent -> GameState
 ; remove first element from queue
-; add a random color to back of queue
+; add a random tile to back of queue
 (define (key-handler s ke)
-  (add-to-end (random-tile) (rest s)))
-;(define (key-handler s ke)
-;  (add-to-end (random-color) (rest s)))
+  (make-game-state
+   (add-to-end (random-tile)
+               (rest (game-state-tile-queue s)))
+   (game-state-tile-board s)))
 
-(define (main-pd tq)
-  (big-bang tq
+; GameState -> GameState
+(define (main-pd s)
+  (big-bang s
     [to-draw draw-everything]
     [on-key key-handler]))
-
-(define (init-false x)
-  #false)
-(define board-state (build-list 70 init-false))
 
 
 ; Number -> Posn
@@ -478,8 +602,18 @@
   ((* 10 (posn-x p)) (posn-y p)))
 
 
+;(main-pd GAME-STATE)
 
-(main-pd TILE-QUEUE)
+;;; TODO: When click
+;; check if click was within the tile-board
+;; if it was, which pixel locations
+;; convert pixel coordinates to grid posn
+;; convert grid posn to index in list
+
+;; get the one removed from tile-queue
+;; put it in the list in place of whatever was there.
+
+
 
 ; [0,0] at top left, [row-1, col-1] at bottom right
 
