@@ -10,6 +10,13 @@
 (define CELL-WIDTH 50)
 (define GAME-WIDTH (* CELL-WIDTH 12))
 
+(define BOARD-NUM-ROWS 7)
+(define BOARD-NUM-COLS 10)
+(define BOARD-NUM-CELLS
+  (* BOARD-NUM-ROWS BOARD-NUM-COLS))
+
+(define ORIENTATIONS (list "left" "right" "top" "bottom"))
+
 ; Image -> Image
 (define (add-tile-edges tile)
   (overlay (square CELL-WIDTH "outline" "DimGray") tile))
@@ -42,24 +49,30 @@
   (crop 0 UPPER-BARRIER UPPER-BARRIER UPPER-BARRIER
         (circle UPPER-BARRIER "solid" "green")))
 
-(define TOP-RIGHT-INNER-GRAY (crop 0 LOWER-BARRIER LOWER-BARRIER LOWER-BARRIER
-                                   (circle LOWER-BARRIER "solid" "gray")))
-(define TOP-LEFT-INNER-GRAY (crop LOWER-BARRIER LOWER-BARRIER LOWER-BARRIER LOWER-BARRIER
-                                  (circle LOWER-BARRIER "solid" "gray")))
-(define BOTTOM-RIGHT-INNER-GRAY (crop 0 0 LOWER-BARRIER LOWER-BARRIER
-                                      (circle LOWER-BARRIER "solid" "gray")))
-(define BOTTOM-LEFT-INNER-GRAY (crop LOWER-BARRIER 0 LOWER-BARRIER LOWER-BARRIER
-                                     (circle LOWER-BARRIER "solid" "gray")))
+(define TOP-RIGHT-INNER-GRAY
+  (crop 0 LOWER-BARRIER LOWER-BARRIER LOWER-BARRIER
+        (circle LOWER-BARRIER "solid" "gray")))
+(define TOP-LEFT-INNER-GRAY
+  (crop LOWER-BARRIER LOWER-BARRIER LOWER-BARRIER LOWER-BARRIER
+        (circle LOWER-BARRIER "solid" "gray")))
+(define BOTTOM-RIGHT-INNER-GRAY
+  (crop 0 0 LOWER-BARRIER LOWER-BARRIER
+        (circle LOWER-BARRIER "solid" "gray")))
+(define BOTTOM-LEFT-INNER-GRAY
+  (crop LOWER-BARRIER 0 LOWER-BARRIER LOWER-BARRIER
+        (circle LOWER-BARRIER "solid" "gray")))
 
 
 
 ;;; Pipe Content (no background)
 
+; Number[0,100] String -> Image
 (define (pipe-horizontal-content percent-filled color)
   (rectangle (linear-pipe-fill-length percent-filled)
              PIPE-WIDTH
              "solid" color))
 
+; Number[0,100] String -> Image
 (define (pipe-vertical-content percent-filled color)
   (rectangle PIPE-WIDTH
              (linear-pipe-fill-length percent-filled)
@@ -69,6 +82,7 @@
 
 ;;; Pipe Tile Partially Filled w/ Background
 
+; String Number[0,100] -> Image
 (define (pipe-vertical-partial-fill start-position percent-filled)
   (add-tile-edges
    (overlay/align "middle"
@@ -77,6 +91,7 @@
                   (pipe-vertical-content PERCENT-FULL "black")
                   CELL-BACKGROUND)))
 
+; String Number[0,100] -> Image
 (define (pipe-horizontal-partial-fill start-position percent-filled)
   (add-tile-edges
    (overlay/align (if (= 0 percent-filled) "left" start-position)
@@ -84,6 +99,76 @@
                   (pipe-horizontal-content percent-filled "green")
                   (pipe-horizontal-content PERCENT-FULL "black")
                   CELL-BACKGROUND)))
+
+; String -> String
+(define (opp-orientation posn-string)
+  (cond [(string=? "top" posn-string)    "bottom"]
+        [(string=? "bottom" posn-string) "top"]
+        [(string=? "left" posn-string)   "right"]
+        [(string=? "right" posn-string)  "left"]))
+
+; -> Image
+(define (start-s-img)
+  (overlay
+   (text "S" 10 "black")
+   (square (/ CELL-WIDTH 2) "solid" "gray")))
+
+; String Number[0,100] -> Image
+(define (start-pipe-vertical-overlay
+         end-position percent-filled)
+  (overlay/align
+   "middle" (opp-orientation end-position)
+   (pipe-vertical-content (/ percent-filled 2) "green")
+   (pipe-vertical-content (/ PERCENT-FULL 2) "black")))
+
+; String Number[0,100] -> Image
+(define (start-pipe-horizontal-overlay
+         end-position percent-filled)
+  (overlay/align
+   (opp-orientation end-position) "middle"
+   (pipe-horizontal-content (/ percent-filled 2) "green")
+   (pipe-horizontal-content (/ PERCENT-FULL 2) "black")))
+
+; String Number[0,100] -> Image
+(define (start-pipe-vertical-partial-fill
+         end-position percent-filled)
+  (overlay/align
+   "middle" end-position
+   (if (string=? "top" end-position)
+       (above (start-pipe-vertical-overlay
+               end-position percent-filled)
+              (start-s-img))
+       (above (start-s-img)
+              (start-pipe-vertical-overlay
+               end-position percent-filled)))
+   CELL-BACKGROUND))
+
+; String Number[0,100] -> Image
+(define (start-pipe-horizontal-partial-fill
+         end-position percent-filled)
+  (overlay/align
+   end-position "middle"
+   (if (string=? "left" end-position)
+       (beside (start-pipe-horizontal-overlay
+                end-position percent-filled)
+               (start-s-img))
+       (beside (start-s-img)
+               (start-pipe-horizontal-overlay
+                end-position percent-filled)))
+   CELL-BACKGROUND))
+
+; String Number[0,100] -> Image
+(define (start-pipe-partial-fill end-position percent-filled)
+  (add-tile-edges
+   (cond
+     [(or (string=? "top" end-position)
+          (string=? "bottom" end-position))
+      (start-pipe-vertical-partial-fill
+       end-position percent-filled)]
+     [(or (string=? "left" end-position)
+          (string=? "right" end-position))
+      (start-pipe-horizontal-partial-fill
+       end-position percent-filled)])))
 
 
 
@@ -301,6 +386,18 @@
 
 
 
+;;; START-TILES
+(beside (start-pipe-partial-fill "left" 0)
+        (start-pipe-partial-fill "left" 54)
+        (start-pipe-partial-fill "right" 0)
+        (start-pipe-partial-fill "right" 39))
+
+(beside (start-pipe-partial-fill "top" 0)
+        (start-pipe-partial-fill "top" 40)
+        (start-pipe-partial-fill "bottom" 0)
+        (start-pipe-partial-fill "bottom" 70))
+
+
 ;;; LINES
 (beside (pipe-vertical-partial-fill "unknown" 0)
         (pipe-vertical-partial-fill "bottom" 17)
@@ -366,8 +463,9 @@
     (rev lst0 empty)))
 
 (check-expect
- (front-to-back (cons "red" (cons "orange" (cons "yellow" (cons "green" (cons "blue" '()))))))
- (cons "orange" (cons "yellow" (cons "green" (cons "blue" (cons "red" '()))))))
+ (front-to-back
+  (list "red" "orange" "yellow" "green" "blue"))
+ (list "orange" "yellow" "green" "blue" "red"))
 
 ; List-of-Anything -> List-of-Anything
 ; move the front-most item in a list the end.
@@ -381,10 +479,13 @@
 ; - "left"
 ; - "right"
 
-; A StateTile is a data representation of a tile at any moment in time.
+; A StateTile is a data representation
+; of a tile at any moment in time.
 (define-struct state-tile
   [type start-position end-position percent-filled])
 ; Type is one of:
+; - "no-pipe"
+; - "start-pipe"
 ; - "pipe-vertical"
 ; - "pipe-horizontal"
 ; - "pipe-corner-top-left"
@@ -398,34 +499,50 @@
 ; Needs to be able to accept flow from either side
 ; What about position without a tile?
 (define EMPTY-STATE-TILES-LIST
-  (list (make-state-tile "pipe-vertical" "unknown" "unknown" 0)
-        (make-state-tile "pipe-horizontal" "unknown" "unknown" 0)
-        (make-state-tile "pipe-corner-top-left" "unknown" "unknown" 0)
-        (make-state-tile "pipe-corner-top-right" "unknown" "unknown" 0)
-        (make-state-tile "pipe-corner-bottom-left" "unknown" "unknown" 0)
-        (make-state-tile "pipe-corner-bottom-right" "unknown" "unknown" 0)))
+  (list (make-state-tile
+         "pipe-vertical" "unknown" "unknown" 0)
+        (make-state-tile
+         "pipe-horizontal" "unknown" "unknown" 0)
+        (make-state-tile
+         "pipe-corner-top-left" "unknown" "unknown" 0)
+        (make-state-tile
+         "pipe-corner-top-right" "unknown" "unknown" 0)
+        (make-state-tile
+         "pipe-corner-bottom-left" "unknown" "unknown" 0)
+        (make-state-tile
+         "pipe-corner-bottom-right" "unknown" "unknown" 0)))
 
-
+;(state-tile->image (make-state-tile "start-pipe" "unknown" "top" 0))
 ; StateTile -> Image
 (define (state-tile->image st)
   (local [(define type (state-tile-type st))
           (define start-position (state-tile-start-position st))
+          (define end-position (state-tile-end-position st))
           (define percent-filled (state-tile-percent-filled st))]
     (cond
       [(string=? "no-pipe" type)
        CELL-BACKGROUND]
+      [(string=? "start-pipe" type)
+       (start-pipe-partial-fill
+        end-position percent-filled)]
       [(string=? "pipe-vertical" type)
-       (pipe-vertical-partial-fill start-position percent-filled)]
+       (pipe-vertical-partial-fill
+        start-position percent-filled)]
       [(string=? "pipe-horizontal" type)
-       (pipe-horizontal-partial-fill start-position percent-filled)]
+       (pipe-horizontal-partial-fill
+        start-position percent-filled)]
       [(string=? "pipe-corner-top-left" type)
-       (pipe-corner-top-left-partial-fill start-position percent-filled)]
+       (pipe-corner-top-left-partial-fill
+        start-position percent-filled)]
       [(string=? "pipe-corner-top-right" type)
-       (pipe-corner-top-right-partial-fill start-position percent-filled)]
+       (pipe-corner-top-right-partial-fill
+        start-position percent-filled)]
       [(string=? "pipe-corner-bottom-left" type)
-       (pipe-corner-bottom-left-partial-fill start-position percent-filled)]
+       (pipe-corner-bottom-left-partial-fill
+        start-position percent-filled)]
       [(string=? "pipe-corner-bottom-right" type)
-       (pipe-corner-bottom-right-partial-fill start-position percent-filled)])))
+       (pipe-corner-bottom-right-partial-fill
+        start-position percent-filled)])))
 
 
 (define exlist
@@ -440,14 +557,21 @@
 
 (check-expect
  (create-board-row 0 1 exlist)
- (beside (state-tile->image (make-state-tile "pipe-vertical" "bottom" "unknown" 0))
-         (state-tile->image (make-state-tile "pipe-vertical" "bottom" "unknown" 10))))
+ (beside (state-tile->image
+          (make-state-tile "pipe-vertical" "bottom" "unknown" 0))
+         (state-tile->image
+          (make-state-tile "pipe-vertical" "bottom" "unknown" 10))))
 
 (check-expect
  (create-board-row 0 2 exlist)
- (beside (state-tile->image (make-state-tile "pipe-vertical" "bottom" "unknown" 0))
-         (beside (state-tile->image (make-state-tile "pipe-vertical" "bottom" "unknown" 10))
-                 (state-tile->image (make-state-tile "pipe-vertical" "bottom" "unknown" 20)))))
+ (beside
+  (state-tile->image
+   (make-state-tile "pipe-vertical" "bottom" "unknown" 0))
+  (beside
+   (state-tile->image
+    (make-state-tile "pipe-vertical" "bottom" "unknown" 10))
+   (state-tile->image
+    (make-state-tile "pipe-vertical" "bottom" "unknown" 20)))))
 
 ; Natural Natural (listof StateTile) -> Image
 (define (create-board-row start-idx end-idx lst)
@@ -464,6 +588,7 @@
 
 ; -> Image
 (define (random-tile)
+  ;; TODO defined a #'select-rand-elt-from
   (list-ref EMPTY-STATE-TILES-LIST
             (random (length EMPTY-STATE-TILES-LIST))))
 
@@ -473,23 +598,15 @@
 
 ; -> Image
 (define (empty-tile)
-  (make-state-tile "pipe-vertical" "bottom" "unknown" 10))
+  (make-state-tile "no-pipe" "unknown" "unknown" 0))
+
 
 ;; TODO:
 ; A GameState composes two lists for maintaining
 ; the tile-queue and the game-board
 (define-struct game-state [tile-queue tile-board])
 
-;; (listof StateTile)
-(define TILE-QUEUE
-  (build-list 9 random-tile-ignore-arg))
 
-;; (listof StateTile)
-(define TILE-BOARD
-  (build-list 70 empty-tile-ignore-arg))
-
-;; To be passed to main and big-bang function
-(define GAME-STATE (make-game-state TILE-QUEUE TILE-BOARD))
 
 (define BLUE-NAV (overlay
     (text "Pipe Dream" 14 "white")
@@ -534,15 +651,6 @@
    (draw-tile-queue s)
    (rectangle CELL-WIDTH (- CELL-WIDTH 20) "solid" "lightgray")))
 
-#;
-(define EMPTY-GRID-ROW
-  ;(create-board-row 0 9 )
-  (beside CELL-BACKGROUND CELL-BACKGROUND
-          CELL-BACKGROUND CELL-BACKGROUND
-          CELL-BACKGROUND CELL-BACKGROUND
-          CELL-BACKGROUND CELL-BACKGROUND
-          CELL-BACKGROUND CELL-BACKGROUND))
-
 ; GameState -> Image
 (define (draw-grid s)
   (above (create-board-row  0  9 (game-state-tile-board s))
@@ -561,20 +669,6 @@
          (state-tile->image (second (game-state-tile-queue s)))
          (state-tile->image (first (game-state-tile-queue s)))))
 
-#;
-(define (draw-tile-board-row start end tile-board)
-  ...)
-
-; GameState -> Image
-(define (draw-tile-board s)
-  ;(above (draw-tile-board-row 0 9 (game-state-tile-board s)))
-  (above (beside (list-ref (game-state-tile-board s) 0)
-                 (list-ref (game-state-tile-board s) 1)
-                 (list-ref (game-state-tile-board s) 2))
-         (beside (list-ref (game-state-tile-board s) 3)
-                 (list-ref (game-state-tile-board s) 4)
-                 (list-ref (game-state-tile-board s) 5))))
-
 
 ; (listof Any) -> (listof Any)
 ; GameState KeyEvent -> GameState
@@ -592,7 +686,6 @@
     [to-draw draw-everything]
     [on-key key-handler]))
 
-
 ; Number -> Posn
 (define (get-posn idx)
   (make-posn (floor (/ idx 10)) (modulo idx 10)))
@@ -602,7 +695,75 @@
   ((* 10 (posn-x p)) (posn-y p)))
 
 
-;(main-pd GAME-STATE)
+(check-expect
+ (replace-nth "f" 2 (cons "a" (cons "b" (cons "c" (cons "d" empty)))))
+ (cons "a" (cons "b" (cons "f" (cons "d" empty)))))
+(check-expect
+ (replace-nth "f" 1 (cons "b" (cons "c" (cons "d" empty))))
+ (cons "b" (cons "f" (cons "d" empty))))
+(check-expect (replace-nth 555 0 (list "A" "B" "C"))
+              (list 555 "B" "C"))
+
+; (listof Any) -> (listof Any)
+(define (replace-nth item idx lst)
+  (cond [(empty? lst) empty]
+        [(= 0 idx) (cons item (rest lst))]
+        [else (cons (first lst)
+                    (replace-nth item (- idx 1) (rest lst)))]))
+
+
+;; O|O|O    X|X|X
+;; O|O|O -> X|O|X
+;; O|O|O    X|X|X
+
+; (listof Naturals) -> (listof Naturals)
+(define (exclude-board-edges lst)
+  (cond [(empty? lst) empty]
+        [else (if (edge-piece? (first lst))
+                  (exclude-board-edges (rest lst))
+                  (cons (first lst)
+                        (exclude-board-edges (rest lst))))]))
+
+; Number -> Boolean
+(define (edge-piece? num)
+  (cond [(< num BOARD-NUM-COLS) #true]
+        [(= (modulo num BOARD-NUM-COLS) 0) #true]
+        [(= (modulo num BOARD-NUM-COLS) (- BOARD-NUM-COLS 1)) #true]
+        [(>= num (- BOARD-NUM-CELLS BOARD-NUM-COLS)) #true]
+        [else #false]))
+
+; (listof Naturals) -> Natural
+(define (select-rand-elt-from eligibles)
+  (list-ref eligibles (random (length eligibles))))
+
+; (listof Naturals) -> Natural
+(define (get-start-tile-idx)
+  (select-rand-elt-from
+   (exclude-board-edges
+    (build-list BOARD-NUM-CELLS identity))))
+
+
+;; (listof StateTile)
+(define TILE-QUEUE
+  (build-list 9 random-tile-ignore-arg))
+
+;; (listof StateTile)
+(define TILE-BOARD
+  (replace-nth
+   ;; TODO: Make separate start-tile state and image.
+   ;; Should it be able to face any orientation?
+   (make-state-tile "start-pipe" "unknown"
+                    (select-rand-elt-from ORIENTATIONS) 0)
+   (get-start-tile-idx)
+   (build-list BOARD-NUM-CELLS empty-tile-ignore-arg)))
+
+;; To be passed to main and big-bang function
+(define GAME-STATE (make-game-state TILE-QUEUE TILE-BOARD))
+
+(main-pd GAME-STATE)
+
+
+
 
 ;;; TODO: When click
 ;; check if click was within the tile-board
@@ -616,9 +777,3 @@
 
 
 ; [0,0] at top left, [row-1, col-1] at bottom right
-
-
-
-
-
-
