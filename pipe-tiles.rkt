@@ -9,6 +9,7 @@
 
 (define CELL-WIDTH 50)
 (define GAME-WIDTH (* CELL-WIDTH 12))
+(define GAME-HEIGHT (+ (* CELL-WIDTH 7) (* 4/3 CELL-WIDTH)))
 
 (define BOARD-NUM-ROWS 7)
 (define BOARD-NUM-COLS 10)
@@ -16,6 +17,12 @@
   (* BOARD-NUM-ROWS BOARD-NUM-COLS))
 
 (define ORIENTATIONS (list "left" "right" "top" "bottom"))
+
+
+(define BOARD-LEFT-EDGE   (+ CELL-WIDTH (* 2/3 CELL-WIDTH)))
+(define BOARD-RIGHT-EDGE  (- GAME-WIDTH (* 1/3 CELL-WIDTH)))
+(define BOARD-TOP-EDGE    CELL-WIDTH)
+(define BOARD-BOTTOM-EDGE (- GAME-HEIGHT (* 1/3 CELL-WIDTH)))
 
 ; Image -> Image
 (define (add-tile-edges tile)
@@ -62,6 +69,15 @@
   (crop LOWER-BARRIER 0 LOWER-BARRIER LOWER-BARRIER
         (circle LOWER-BARRIER "solid" "gray")))
 
+(define ARROW-TOP
+  (overlay/align
+   "middle" "top"
+   (triangle 6 "solid" "green")
+   (rectangle 1 (/ 50 2) "solid" "green")))
+
+(define ARROW-BOTTOM (rotate 180 ARROW-TOP))
+(define ARROW-LEFT (rotate 90 ARROW-TOP))
+(define ARROW-RIGHT (rotate 270 ARROW-TOP))
 
 
 ;;; Pipe Content (no background)
@@ -119,7 +135,10 @@
   (overlay/align
    "middle" (opp-orientation end-position)
    (pipe-vertical-content (/ percent-filled 2) "green")
-   (pipe-vertical-content (/ PERCENT-FULL 2) "black")))
+   (overlay
+    (if (string=? end-position "top")
+        ARROW-TOP ARROW-BOTTOM)
+    (pipe-vertical-content (/ PERCENT-FULL 2) "black"))))
 
 ; String Number[0,100] -> Image
 (define (start-pipe-horizontal-overlay
@@ -127,34 +146,49 @@
   (overlay/align
    (opp-orientation end-position) "middle"
    (pipe-horizontal-content (/ percent-filled 2) "green")
-   (pipe-horizontal-content (/ PERCENT-FULL 2) "black")))
+   (overlay
+    (if (string=? end-position "left")
+        ARROW-LEFT ARROW-RIGHT)
+    (pipe-horizontal-content (/ PERCENT-FULL 2) "black"))))
+
+; String Number[0,100] -> Image
+(define (letter-next-to-start-pipe-vertical
+         end-position percent-filled)
+  (if (string=? "top" end-position)
+       (above
+        (start-pipe-vertical-overlay end-position percent-filled)
+        (start-s-img))
+       (above
+        (start-s-img)
+        (start-pipe-vertical-overlay end-position percent-filled))))
 
 ; String Number[0,100] -> Image
 (define (start-pipe-vertical-partial-fill
          end-position percent-filled)
   (overlay/align
    "middle" end-position
-   (if (string=? "top" end-position)
-       (above (start-pipe-vertical-overlay
-               end-position percent-filled)
-              (start-s-img))
-       (above (start-s-img)
-              (start-pipe-vertical-overlay
-               end-position percent-filled)))
+   (letter-next-to-start-pipe-vertical
+    end-position percent-filled)
    CELL-BACKGROUND))
+
+; String Number[0,100] -> Image
+(define (letter-next-to-start-pipe-horizontal
+         end-position percent-filled)
+  (if (string=? "left" end-position)
+       (beside
+        (start-pipe-horizontal-overlay end-position percent-filled)
+        (start-s-img))
+       (beside
+        (start-s-img)
+        (start-pipe-horizontal-overlay end-position percent-filled))))
 
 ; String Number[0,100] -> Image
 (define (start-pipe-horizontal-partial-fill
          end-position percent-filled)
   (overlay/align
    end-position "middle"
-   (if (string=? "left" end-position)
-       (beside (start-pipe-horizontal-overlay
-                end-position percent-filled)
-               (start-s-img))
-       (beside (start-s-img)
-               (start-pipe-horizontal-overlay
-                end-position percent-filled)))
+   (letter-next-to-start-pipe-horizontal
+    end-position percent-filled)
    CELL-BACKGROUND))
 
 ; String Number[0,100] -> Image
@@ -427,12 +461,6 @@
         (pipe-corner-bottom-left-partial-fill "bottom" 37))
 
 
-;; Add a world program
-
-; List-of-Anything is one of:
-; - (cons Any empty)
-; - (cons Any List-of-Anything)
-
 (check-expect (add-to-end 0 empty) (cons 0 empty))
 (check-expect (add-to-end 6 (cons 5 empty))
               (cons 5 (cons 6 empty)))
@@ -441,9 +469,8 @@
 
 
 
-; List-of-Anything Any -> List-of-Anything
+; (listof Any) -> (listof Any)
 ; add element to end of list
-
 (define (add-to-end item listo)
   (reverse-copy (cons item (reverse-copy listo))))
 
@@ -669,31 +696,89 @@
          (state-tile->image (second (game-state-tile-queue s)))
          (state-tile->image (first (game-state-tile-queue s)))))
 
+; GameState Number -> GameState
+; Pop head of TileQueue (and replace)
+; and place tile in TileBoard
+(define (queue-head-tile-to-board s at-board-idx)
+  (make-game-state
+   (add-to-end (random-tile)
+               (rest (game-state-tile-queue s)))
+   (replace-nth (first (game-state-tile-queue s))
+                at-board-idx
+                (game-state-tile-board s))))
 
 ; (listof Any) -> (listof Any)
 ; GameState KeyEvent -> GameState
 ; remove first element from queue
 ; add a random tile to back of queue
 (define (key-handler s ke)
-  (make-game-state
-   (add-to-end (random-tile)
-               (rest (game-state-tile-queue s)))
-   (game-state-tile-board s)))
+  (queue-head-tile-to-board s 0))
 
-; GameState -> GameState
-(define (main-pd s)
-  (big-bang s
-    [to-draw draw-everything]
-    [on-key key-handler]))
+(check-expect (get-posn 0) (make-posn 0 0))
+(check-expect (get-posn 1) (make-posn 0 1))
+(check-expect (get-posn 10) (make-posn 1 0))
+(check-expect (get-posn 11) (make-posn 1 1))
 
 ; Number -> Posn
 (define (get-posn idx)
   (make-posn (floor (/ idx 10)) (modulo idx 10)))
 
+(check-expect (get-index (make-posn 0 0)) 0)
+(check-expect (get-index (make-posn 0 1)) 1)
+(check-expect (get-index (make-posn 1 0)) 10)
+(check-expect (get-index (make-posn 1 1)) 11)
+(check-expect (get-index (make-posn 2 2)) 22)
+
 ; Posn -> Number
 (define (get-index p)
-  ((* 10 (posn-x p)) (posn-y p)))
+  (+ (* 10 (posn-x p)) (posn-y p)))
 
+(check-expect
+ (coords-inside-board? (+ 30 BOARD-LEFT-EDGE)
+                       (+ 15 BOARD-TOP-EDGE)) #true)
+(check-expect
+ (coords-inside-board? (+ BOARD-RIGHT-EDGE BOARD-LEFT-EDGE)
+                       (+ BOARD-BOTTOM-EDGE BOARD-TOP-EDGE)) #false)
+
+; Number Number -> Boolean
+;; if x and y above and below appropriate vals
+(define (coords-inside-board? x y)
+  (and (> x BOARD-LEFT-EDGE)
+       (< x BOARD-RIGHT-EDGE)
+       (> y BOARD-TOP-EDGE)
+       (< y BOARD-BOTTOM-EDGE)))
+
+(check-expect (get-tile-index 32 25) 0)
+(check-expect (get-tile-index 75 25) 1)
+(check-expect (get-tile-index 32 78) 10)
+(check-expect (get-tile-index 0 0) 0)
+(check-expect (get-tile-index 49 49) 0)
+(check-expect (get-tile-index 51 51) 11)
+
+; Number Number -> Number
+(define (get-tile-index x y)
+  (get-index (make-posn (floor (/ y CELL-WIDTH))
+                        (floor (/ x CELL-WIDTH)))))
+
+(define (get-adjusted-tile-index x y)
+  (get-tile-index (- x BOARD-LEFT-EDGE)
+                  (- y BOARD-TOP-EDGE)))
+
+; GameState Number Number MouseEvent -> GameState
+(define (mouse-handler s x y me)
+  (cond [(and (mouse-event? me)
+              (mouse=? "button-up" me)
+              (coords-inside-board? x y))
+         (queue-head-tile-to-board
+          s (get-adjusted-tile-index x y))]
+        [else s]))
+
+; GameState -> GameState
+(define (main-pd s)
+  (big-bang s
+    [to-draw draw-everything]
+    [on-mouse mouse-handler]
+    [on-key key-handler]))
 
 (check-expect
  (replace-nth "f" 2 (cons "a" (cons "b" (cons "c" (cons "d" empty)))))
