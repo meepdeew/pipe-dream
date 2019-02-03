@@ -711,6 +711,7 @@
 ; GameState KeyEvent -> GameState
 ; remove first element from queue
 ; add a random tile to back of queue
+#;
 (define (key-handler s ke)
   (queue-head-tile-to-board s 0))
 
@@ -778,6 +779,7 @@
   (big-bang s
     [to-draw draw-everything]
     [on-mouse mouse-handler]
+    #;
     [on-key key-handler]))
 
 (check-expect
@@ -849,15 +851,6 @@
 
 
 
-
-;;; TODO: When click
-;; check if click was within the tile-board
-;; if it was, which pixel locations
-;; convert pixel coordinates to grid posn
-;; convert grid posn to index in list
-
-;; get the one removed from tile-queue
-;; put it in the list in place of whatever was there.
 
 
 
